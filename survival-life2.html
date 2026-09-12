@@ -5,264 +5,418 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Survival-Life 2</title>
   <style>
-    body { margin: 0; overflow: hidden; background: #000; touch-action: none; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { overflow: hidden; background: #000; touch-action: none; font-family: sans-serif; }
     canvas { display: block; }
 
-    /* Прицел */
     #crosshair {
-      position: absolute; top: 50%; left: 50%; width: 20px; height: 20px;
-      background: rgba(255,255,255,0.8); border-radius: 50%;
+      position: absolute; top: 50%; left: 50%; width: 24px; height: 24px;
+      border: 2px solid rgba(255,255,255,0.7); border-radius: 50%;
       transform: translate(-50%, -50%); pointer-events: none; z-index: 10;
     }
 
-    /* HUD */
     #hud {
       position: absolute; top: 10px; left: 10px; color: #fff;
-      font-family: sans-serif; padding: 8px; background: rgba(0,0,0,0.6);
-      border: 1px solid #444; z-index: 10;
+      padding: 8px 12px; background: rgba(0,0,0,0.6); border: 1px solid #444;
+      z-index: 10; font-size: 14px;
     }
 
-    /* Сообщение старта */
     #message {
-      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      color: #fff; font-family: sans-serif; font-size: 24px; text-align: center;
-      z-index: 20; display: flex; flex-direction: column; align-items: center;
-      gap: 12px; background: rgba(0,0,0,0.8); padding: 20px 40px; border: 1px solid #555;
+      position: absolute; inset: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; color: #fff; z-index: 20;
+      background: rgba(0,0,0,0.85); font-size: 20px; text-align: center; gap: 16px;
+    }
+    #message .hint { font-size: 14px; opacity: 0.7; max-width: 320px; line-height: 1.5; }
+    #startBtn {
+      padding: 14px 36px; font-size: 18px; background: #ff4444; color: #fff;
+      border: none; border-radius: 8px; cursor: pointer; font-family: sans-serif;
+    }
+    #startBtn:active { background: #cc2222; }
+
+    /* --- Мобильное управление --- */
+    #mobileUI { display: none; position: fixed; inset: 0; z-index: 5; pointer-events: none; }
+
+    .joystick-base {
+      position: absolute; bottom: 30px; left: 30px; width: 130px; height: 130px;
+      border: 2px solid rgba(255,255,255,0.3); border-radius: 50%;
+      background: rgba(0,0,0,0.3); pointer-events: auto; touch-action: none;
+    }
+    .joystick-knob {
+      position: absolute; width: 56px; height: 56px; border-radius: 50%;
+      background: rgba(255,255,255,0.5); border: 2px solid rgba(255,255,255,0.8);
+      top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none;
     }
 
-    /* Кнопки управления (мобильные) */
-    .mobile-controls { display: none; position: fixed; bottom: 20px; width: 100%; justify-content: space-between; padding: 0 20px; z-index: 5; }
-    @media (max-width: 768px) { .mobile-controls { display: flex; } }
+    .look-area {
+      position: absolute; top: 0; right: 0; width: 55%; height: 70%;
+      pointer-events: auto; touch-action: none;
+    }
 
-    .btn-group { display: flex; gap: 8px; }
-    .btn {
-      width: 60px; height: 60px; background: rgba(0,0,0,0.7);
-      color: #fff; border: 2px solid #666; border-radius: 12px;
+    .shoot-btn {
+      position: absolute; bottom: 50px; right: 30px; width: 90px; height: 90px;
+      border-radius: 50%; background: rgba(255,80,80,0.6);
+      border: 3px solid rgba(255,120,120,0.9); color: #fff;
       display: flex; align-items: center; justify-content: center;
-      font-size: 28px; user-select: none; touch-action: manipulation;
+      font-size: 28px; pointer-events: auto; touch-action: manipulation;
+      user-select: none;
     }
-    .btn:active { background: #ff6666; transform: scale(0.95); }
-    .btn.shoot { width: 80px; height: 80px; font-size: 32px; }
+    .shoot-btn:active { background: rgba(255,0,0,0.8); transform: scale(0.92); }
 
-    /* Иконки кнопок (простые символы) */
-    .icon-up::after    { content: "▲"; }
-    .icon-down::after  { content: "▼"; }
-    .icon-left::after   { content: "◀"; }
-    .icon-right::after  { content: "▶"; }
-    .icon-shoot::after  { content: "🔥"; }
+    @media (pointer: coarse), (max-width: 768px) {
+      #mobileUI { display: block; }
+    }
   </style>
 </head>
 <body>
   <div id="crosshair"></div>
-  <div id="hud">Убито врагов: <span id="kills">0</span></div>
+  <div id="hud">Убито: <span id="kills">0</span> | Врагов: <span id="enemyCount">5</span></div>
 
   <div id="message">
-    <span>Нажмите, чтобы начать</span>
+    <div>3D FPS — прототип</div>
+    <div class="hint" id="hintText">
+      ПК: WASD — движение, мышь — обзор, ЛКМ — стрельба<br>
+      Моб.: джойстик — движение, свайп справа — обзор, кнопка — стрельба
+    </div>
+    <button id="startBtn">Играть</button>
   </div>
 
-  <!-- Мобильные кнопки -->
-  <div class="mobile-controls">
-    <div class="btn-group">
-      <div class="btn icon-up"    onmousedown="setMove('forward', true)" onmouseup="setMove('forward', false)"></div>
-      <div class="btn icon-down"  onmousedown="setMove('backward', true)" onmouseup="setMove('backward', false)"></div>
-      <div class="btn icon-left"  onmousedown="setMove('left', true)" onmouseup="setMove('left', false)"></div>
-      <div class="btn icon-right" onmousedown="setMove('right', true)" onmouseup="setMove('right', false)"></div>
+  <!-- Мобильный интерфейс -->
+  <div id="mobileUI">
+    <div class="look-area" id="lookArea"></div>
+    <div class="joystick-base" id="joyBase">
+      <div class="joystick-knob" id="joyKnob"></div>
     </div>
-    <div>
-      <div class="btn shoot icon-shoot" onmousedown="shoot()" onmouseup="shootCancel()"></div>
-    </div>
+    <div class="shoot-btn" id="shootBtn">🔥</div>
   </div>
 
   <script type="importmap">
     {
       "imports": {
-        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
       }
     }
   </script>
 
   <script type="module">
     import * as THREE from 'three';
-    import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
 
+    // ====== Сцена ======
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x111115);
-    scene.fog = new THREE.Fog(0x111115, 8, 40);
+    scene.fog = new THREE.Fog(0x111115, 10, 45);
 
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.y = 1.6;
+    const camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.1, 1000);
+    camera.position.set(0, 1.6, 0);
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(innerWidth, innerHeight);
     document.body.appendChild(renderer.domElement);
 
-    // Освещение
-    const light = new THREE.HemisphereLight(0xffffff, 0x444466, 2);
-    scene.add(light);
-    const dirLight = new THREE.DirectionalLight(0xffffff, 1);
-    dirLight.position.set(50, 50, 30);
-    scene.add(dirLight);
+    // ====== Свет ======
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x444466, 1.5));
+    const dir = new THREE.DirectionalLight(0xffffff, 1);
+    dir.position.set(20, 30, 10);
+    scene.add(dir);
 
-    // Пол
-    const floorGeo = new THREE.PlaneGeometry(100, 100);
-    floorGeo.rotateX(-Math.PI / 2);
-    const floorMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
-    scene.add(new THREE.Mesh(floorGeo, floorMat));
+    // ====== Пол ======
+    const floor = new THREE.Mesh(
+      new THREE.PlaneGeometry(100, 100).rotateX(-Math.PI / 2),
+      new THREE.MeshStandardMaterial({ color: 0x2a2a2a })
+    );
+    scene.add(floor);
 
-    // Стены
-    function makeWall(x, y, z, w, h, d) {
-      const geo = new THREE.BoxGeometry(w, h, d);
-      const mat = new THREE.MeshStandardMaterial({ color: 0x333333 });
-      const wall = new THREE.Mesh(geo, mat);
-      wall.position.set(x, y, z);
+    // Сетка для ощущения движения
+    const grid = new THREE.GridHelper(100, 50, 0x444444, 0x333333);
+    scene.add(grid);
+
+    // ====== Стены ======
+    const wallMat = new THREE.MeshStandardMaterial({ color: 0x3a3a3a });
+    function makeWall(x, z, w, d) {
+      const wall = new THREE.Mesh(new THREE.BoxGeometry(w, 2, d), wallMat);
+      wall.position.set(x, 1, z);
       scene.add(wall);
+      return wall;
     }
-    makeWall(0, 1, -25, 50, 2, 1);
-    makeWall(0, 1, 25, 50, 2, 1);
-    makeWall(-25, 1, 0, 1, 2, 50);
-    makeWall(25, 1, 0, 1, 2, 50);
+    makeWall(0, -25, 50, 1);
+    makeWall(0, 25, 50, 1);
+    makeWall(-25, 0, 1, 50);
+    makeWall(25, 0, 1, 50);
 
-    // Враги
+    // Несколько препятствий
+    makeWall(-8, -10, 4, 1);
+    makeWall(10, 5, 1, 6);
+    makeWall(5, -15, 3, 1);
+
+    // ====== Враги ======
     const enemies = [];
     const enemyGeo = new THREE.BoxGeometry(1, 1, 1);
-    const enemyMat = new THREE.MeshStandardMaterial({ color: 0xff4444 });
-
+    const enemyMat = new THREE.MeshStandardMaterial({ color: 0xff3333, emissive: 0x440000 });
     const MAX_ENEMIES = 5;
-    const ARENA_HALF = 22;
+    const ARENA = 22;
 
     function spawnEnemy() {
       const e = new THREE.Mesh(enemyGeo, enemyMat);
-      let x, z, dist;
+      let x, z;
       do {
-        x = (Math.random() - 0.5) * ARENA_HALF * 2;
-        z = (Math.random() - 0.5) * ARENA_HALF * 2;
-        dist = Math.hypot(x - camera.position.x, z - camera.position.z);
-      } while (dist < 6);
+        x = (Math.random() - 0.5) * ARENA * 2;
+        z = (Math.random() - 0.5) * ARENA * 2;
+      } while (Math.hypot(x - camera.position.x, z - camera.position.z) < 7);
 
       e.position.set(x, 0.5, z);
-      e.userData.speed = 2.0 + Math.random() * 1.5;
+      e.userData.speed = 1.8 + Math.random() * 1.7;
       enemies.push(e);
       scene.add(e);
+      updateHUD();
     }
 
     function fillEnemies() {
       while (enemies.length < MAX_ENEMIES) spawnEnemy();
     }
+
+    function updateHUD() {
+      document.getElementById('kills').textContent = kills;
+      document.getElementById('enemyCount').textContent = enemies.length;
+    }
+
+    let kills = 0;
     fillEnemies();
 
-    // Управление
-    const controls = new PointerLockControls(camera, document.body);
-    const messageEl = document.getElementById('message');
+    // ====== Стрельба ======
+    const raycaster = new THREE.Raycaster();
+    const shootOrigin = new THREE.Vector3();
+    const shootDir = new THREE.Vector3();
+    let shootCooldown = 0;
 
-    document.body.addEventListener('click', () => {
-      if (!controls.isLocked) controls.lock();
-    });
+    function tryShoot() {
+      if (shootCooldown > 0) return;
 
-    controls.addEventListener('lock', () => {
-      messageEl.style.display = 'none';
-    });
-    controls.addEventListener('unlock', () => {
-      messageEl.style.display = 'flex';
-      messageEl.innerText = 'Пауза. Нажмите, чтобы продолжить';
-    });
+      // Луч из центра камеры
+      camera.getWorldPosition(shootOrigin);
+      camera.getWorldDirection(shootDir);
+      raycaster.set(shootOrigin, shootDir);
+      raycaster.far = 100;
 
-    // Переменные движения
-    let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
+      const hits = raycaster.intersectObjects(enemies);
+      if (hits.length > 0) {
+        const hit = hits[0].object;
+        scene.remove(hit);
+        enemies.splice(enemies.indexOf(hit), 1);
+        kills++;
+        updateHUD();
+        spawnEnemy();
+      }
+      shootCooldown = 0.2; // 200мс
+    }
+
+    // ====== Управление ======
+    const yaw = new THREE.Euler(0, 0, 0, 'YXZ');
+    let moveF = false, moveB = false, moveL = false, moveR = false;
     let isShooting = false;
 
-    // Клавиатура (ПК)
-    window.addEventListener('keydown', (e) => {
+    // --- ПК: клавиатура ---
+    addEventListener('keydown', e => {
       switch (e.code) {
-        case 'KeyW': case 'ArrowUp':    moveForward = true; break;
-        case 'KeyS': case 'ArrowDown':  moveBackward = true; break;
-        case 'KeyA': case 'ArrowLeft':  moveLeft = true; break;
-        case 'KeyD': case 'ArrowRight': moveRight = true; break;
+        case 'KeyW': case 'ArrowUp':    moveF = true; break;
+        case 'KeyS': case 'ArrowDown':  moveB = true; break;
+        case 'KeyA': case 'ArrowLeft':  moveL = true; break;
+        case 'KeyD': case 'ArrowRight': moveR = true; break;
       }
     });
-    window.addEventListener('keyup', (e) => {
+    addEventListener('keyup', e => {
       switch (e.code) {
-        case 'KeyW': case 'ArrowUp':    moveForward = false; break;
-        case 'KeyS': case 'ArrowDown':  moveBackward = false; break;
-        case 'KeyA': case 'ArrowLeft':  moveLeft = false; break;
-        case 'KeyD': case 'ArrowRight': moveRight = false; break;
+        case 'KeyW': case 'ArrowUp':    moveF = false; break;
+        case 'KeyS': case 'ArrowDown':  moveB = false; break;
+        case 'KeyA': case 'ArrowLeft':  moveL = false; break;
+        case 'KeyD': case 'ArrowRight': moveR = false; break;
       }
     });
 
-    // Кнопки (мобильные)
-    window.setMove = (dir, val) => {
-      switch (dir) {
-        case 'forward': moveForward = val; break;
-        case 'backward': moveBackward = val; break;
-        case 'left': moveLeft = val; break;
-        case 'right': moveRight = val; break;
+    // --- ПК: мышь ---
+    let isDesktop = matchMedia('(pointer: fine)').matches;
+
+    if (isDesktop) {
+      let mouseLocked = false;
+
+      document.getElementById('startBtn').onclick = () => {
+        document.getElementById('message').style.display = 'none';
+        renderer.domElement.requestPointerLock();
+      };
+
+      document.addEventListener('pointerlockchange', () => {
+        mouseLocked = document.pointerLockElement === renderer.domElement;
+        if (!mouseLocked) {
+          const msg = document.getElementById('message');
+          msg.style.display = 'flex';
+          document.getElementById('startBtn').textContent = 'Продолжить';
+        }
+      });
+
+      document.addEventListener('mousemove', e => {
+        if (!mouseLocked) return;
+        yaw.y -= e.movementX * 0.0025;
+        yaw.x -= e.movementY * 0.0025;
+        yaw.x = Math.max(-1.5, Math.min(1.5, yaw.x));
+      });
+
+      document.addEventListener('mousedown', e => {
+        if (mouseLocked && e.button === 0) tryShoot();
+      });
+    }
+
+    // --- Моб.: джойстик ---
+    const joyBase = document.getElementById('joyBase');
+    const joyKnob = document.getElementById('joyKnob');
+    const lookArea = document.getElementById('lookArea');
+    const shootBtn = document.getElementById('shootBtn');
+
+    let joyActive = false, joyId = null;
+    let joyVec = { x: 0, y: 0 };
+
+    if (!isDesktop) {
+      document.getElementById('startBtn').onclick = () => {
+        document.getElementById('message').style.display = 'none';
+      };
+    }
+
+    joyBase.addEventListener('touchstart', e => {
+      e.preventDefault();
+      joyActive = true;
+      joyId = e.changedTouches[0].identifier;
+      handleJoy(e.changedTouches[0]);
+    }, { passive: false });
+
+    joyBase.addEventListener('touchmove', e => {
+      e.preventDefault();
+      for (const t of e.changedTouches) {
+        if (t.identifier === joyId) handleJoy(t);
       }
-    };
+    }, { passive: false });
 
-    window.shoot = () => { isShooting = true; };
-    window.shootCancel = () => { isShooting = false; };
+    function endJoy(e) {
+      for (const t of e.changedTouches) {
+        if (t.identifier === joyId) {
+          joyActive = false; joyId = null;
+          joyVec = { x: 0, y: 0 };
+          joyKnob.style.transform = 'translate(-50%, -50%)';
+        }
+      }
+    }
+    joyBase.addEventListener('touchend', endJoy);
+    joyBase.addEventListener('touchcancel', endJoy);
 
-    // Стрельба (мышь + мобильные кнопки)
-    const raycaster = new THREE.Vector2();
+    function handleJoy(touch) {
+      const rect = joyBase.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      let dx = touch.clientX - cx;
+      let dy = touch.clientY - cy;
+      const maxR = rect.width / 2;
+      const len = Math.hypot(dx, dy);
+      if (len > maxR) { dx = dx / len * maxR; dy = dy / len * maxR; }
+      joyKnob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+      joyVec.x = dx / maxR;
+      joyVec.y = dy / maxR;
+    }
 
-    const onMouseDown = () => { if (controls.isLocked) shoot(); };
-    const onMouseUp = () => { shootCancel(); };
+    // --- Моб.: обзор свайпом ---
+    let lookId = null, lookX = 0, lookY = 0;
 
-    document.addEventListener('mousedown', onMouseDown);
-    document.addEventListener('mouseup', onMouseUp);
+    lookArea.addEventListener('touchstart', e => {
+      e.preventDefault();
+      if (lookId === null) {
+        lookId = e.changedTouches[0].identifier;
+        lookX = e.changedTouches[0].clientX;
+        lookY = e.changedTouches[0].clientY;
+      }
+    }, { passive: false });
 
-    // Игровой цикл
-    let velocity = new THREE.Vector3();
+    lookArea.addEventListener('touchmove', e => {
+      e.preventDefault();
+      for (const t of e.changedTouches) {
+        if (t.identifier === lookId) {
+          yaw.y -= (t.clientX - lookX) * 0.005;
+          yaw.x -= (t.clientY - lookY) * 0.005;
+          yaw.x = Math.max(-1.5, Math.min(1.5, yaw.x));
+          lookX = t.clientX;
+          lookY = t.clientY;
+        }
+      }
+    }, { passive: false });
+
+    function endLook(e) {
+      for (const t of e.changedTouches) {
+        if (t.identifier === lookId) lookId = null;
+      }
+    }
+    lookArea.addEventListener('touchend', endLook);
+    lookArea.addEventListener('touchcancel', endLook);
+
+    // --- Моб.: стрельба ---
+    shootBtn.addEventListener('touchstart', e => {
+      e.preventDefault();
+      isShooting = true;
+    }, { passive: false });
+
+    shootBtn.addEventListener('touchend', e => {
+      e.preventDefault();
+      isShooting = false;
+    }, { passive: false });
+
+    // ====== Игровой цикл ======
     const clock = new THREE.Clock();
+    const moveDir = new THREE.Vector3();
 
     function animate() {
       requestAnimationFrame(animate);
       const dt = Math.min(clock.getDelta(), 0.05);
 
-      if (controls.isLocked) {
-        // Движение
-        velocity.x = (-moveLeft + moveRight) * 15.0 * dt;
-        velocity.z = (-moveForward + moveBackward) * 15.0 * dt;
-        controls.moveRight(-velocity.x);
-        controls.moveForward(-velocity.z);
+      // Кулдаун стрельбы
+      if (shootCooldown > 0) shootCooldown -= dt;
 
-        // Ограничение арены
-        const p = camera.position;
-        p.x = Math.max(-ARENA_HALF, Math.min(ARENA_HALF, p.x));
-        p.z = Math.max(-ARENA_HALF, Math.min(ARENA_HALF, p.z));
+      // Авто-стрельба при удержании кнопки (мобильные)
+      if (isShooting) tryShoot();
+
+      // Применяем поворот камеры
+      camera.quaternion.setFromEuler(yaw);
+
+      // Движение
+      let mx = 0, mz = 0;
+      if (isDesktop) {
+        if (moveF) mz -= 1;
+        if (moveB) mz += 1;
+        if (moveL) mx -= 1;
+        if (moveR) mx += 1;
+      } else {
+        mx = joyVec.x;
+        mz = joyVec.y;
       }
 
-      // Стрельба
-      if (isShooting && controls.isLocked) {
-        raycaster.set(0, 0); // из центра экрана
-        // Для упрощения используем тот же raycaster из Three.js, но без мышиных координат
-        // Здесь мы эмулируем выстрел из центра камеры
-        const direction = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
-        const origin = camera.position.clone();
-        const ray = new THREE.Ray(origin, direction.normalize());
-        const hits = ray.intersectObjects(enemies);
+      if (mx || mz) {
+        const len = Math.hypot(mx, mz);
+        if (len > 1) { mx /= len; mz /= len; }
 
-        if (hits.length > 0) {
-          const hit = hits[0].object;
-          scene.remove(hit);
-          enemies.splice(enemies.indexOf(hit), 1);
-          document.getElementById('kills').innerText = parseInt(document.getElementById('kills').innerText) + 1;
-          spawnEnemy();
-          // Небольшая задержка между выстрелами (чтобы не спамило)
-          setTimeout(() => {}, 200);
-        }
+        moveDir.set(mx, 0, mz);
+        moveDir.applyEuler(new THREE.Euler(0, yaw.y, 0, 'YXZ'));
+        moveDir.normalize();
+
+        const speed = 8 * dt;
+        camera.position.x += moveDir.x * speed;
+        camera.position.z += moveDir.z * speed;
       }
 
-      // Враги преследуют
-      const playerPos = camera.position;
+      // Границы арены
+      camera.position.x = Math.max(-ARENA, Math.min(ARENA, camera.position.x));
+      camera.position.z = Math.max(-ARENA, Math.min(ARENA, camera.position.z));
+      camera.position.y = 1.6;
+
+      // Движение врагов
       for (const e of enemies) {
-        const dx = playerPos.x - e.position.x;
-        const dz = playerPos.z - e.position.z;
+        const dx = camera.position.x - e.position.x;
+        const dz = camera.position.z - e.position.z;
         const dist = Math.hypot(dx, dz);
-
-        if (dist > 0.01) {
-          const speed = e.userData.speed;
-          const step = speed * dt;
+        if (dist > 0.5) {
+          const step = e.userData.speed * dt;
           e.position.x += (dx / dist) * step;
           e.position.z += (dz / dist) * step;
           e.rotation.y = Math.atan2(dx, dz);
@@ -274,12 +428,13 @@
 
     animate();
 
-    window.addEventListener('resize', () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
+    addEventListener('resize', () => {
+      camera.aspect = innerWidth / innerHeight;
       camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setSize(innerWidth, innerHeight);
     });
   </script>
 </body>
 </html>
+
 
