@@ -1,0 +1,1595 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#000000">
+    <title>Survival-Life 3</title>
+    <style>
+        * {
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+            box-sizing: border-box;
+        }
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            position: fixed;
+            font-family: 'Courier New', monospace;
+            background-color: black;
+            color: #e0e0e0;
+            touch-action: none;
+            overscroll-behavior: none;
+        }
+        #game-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        canvas {
+            display: block;
+            touch-action: none;
+        }
+        .menu-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            padding: 20px;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .hidden {
+            display: none !important;
+        }
+        .menu-box {
+            background: #1a1e1a;
+            border: 2px solid #b87c1e;
+            padding: 25px 30px;
+            border-radius: 8px;
+            box-shadow: 0 0 40px rgba(184, 124, 30, 0.4);
+            text-align: center;
+            width: 100%;
+            max-width: 420px;
+        }
+        .menu-box h1 {
+            font-size: 2rem;
+            margin: 0 0 8px;
+            color: #b87c1e;
+            text-shadow: 0 0 15px #b87c1e;
+            letter-spacing: 3px;
+            font-weight: 700;
+        }
+        .menu-box h2 {
+            font-size: 1rem;
+            margin: 0 0 20px;
+            color: #7a8c7a;
+            font-weight: 400;
+            letter-spacing: 2px;
+        }
+        .menu-box input {
+            display: block;
+            width: 100%;
+            padding: 12px 15px;
+            margin: 10px 0;
+            background: #0d0f0d;
+            border: 2px solid #3a4a3a;
+            color: #b87c1e;
+            font-size: 1rem;
+            font-family: 'Courier New', monospace;
+            border-radius: 4px;
+            outline: none;
+            transition: border 0.2s;
+            -webkit-appearance: none;
+            appearance: none;
+            min-height: 44px;
+        }
+        .menu-box input:focus {
+            border-color: #b87c1e;
+        }
+        .menu-box button {
+            display: block;
+            width: 100%;
+            padding: 14px;
+            margin: 15px 0 8px;
+            background: #2a2e2a;
+            border: 2px solid #b87c1e;
+            color: #b87c1e;
+            font-size: 1.1rem;
+            font-weight: 700;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 1px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            min-height: 48px;
+            touch-action: manipulation;
+        }
+        .menu-box button:active {
+            background: #b87c1e;
+            color: #0d0f0d;
+            box-shadow: 0 0 25px #b87c1e;
+        }
+        .menu-box .small-link {
+            color: #7a8c7a;
+            margin-top: 12px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            text-decoration: underline;
+            background: none;
+            border: none;
+            font-family: 'Courier New', monospace;
+            padding: 10px;
+            min-height: 44px;
+            touch-action: manipulation;
+        }
+        .menu-box .small-link:active {
+            color: #b87c1e;
+        }
+        .mission-list {
+            text-align: left;
+            margin: 15px 0;
+            background: #0d0f0d;
+            padding: 15px;
+            border-radius: 4px;
+            border: 1px solid #3a4a3a;
+            max-height: 50vh;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .mission-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 5px;
+            border-bottom: 1px solid #2a2e2a;
+            color: #7a8c7a;
+            font-size: 0.9rem;
+            gap: 8px;
+        }
+        .mission-item:last-child {
+            border-bottom: none;
+        }
+        .mission-item.active {
+            color: #b87c1e;
+            font-weight: bold;
+        }
+        .mission-item .status {
+            font-size: 0.75rem;
+            white-space: nowrap;
+        }
+        .mission-item.completed .status {
+            color: #4a8c4a;
+        }
+
+        /* HUD */
+        #hud {
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            z-index: 5;
+            color: #b87c1e;
+            text-shadow: 0 0 8px rgba(184, 124, 30, 0.7);
+            font-size: 0.9rem;
+            pointer-events: none;
+            max-width: 60%;
+        }
+        #hud .mission-name {
+            font-size: 1.1rem;
+            font-weight: bold;
+            margin-bottom: 3px;
+        }
+        #hud .objective {
+            color: #7a8c7a;
+            font-size: 0.8rem;
+        }
+
+        /* Прицел */
+        #crosshair {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            width: 16px;
+            height: 16px;
+            transform: translate(-50%, -50%);
+            border: 2px solid #b87c1e;
+            border-radius: 50%;
+            z-index: 5;
+            pointer-events: none;
+            opacity: 0.6;
+            box-shadow: 0 0 10px #b87c1e;
+        }
+
+        /* Подсказка взаимодействия */
+        #interact-prompt {
+            position: fixed;
+            bottom: 180px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #b87c1e;
+            background: rgba(0,0,0,0.8);
+            padding: 8px 16px;
+            border: 1px solid #b87c1e;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            z-index: 5;
+            pointer-events: none;
+            text-shadow: 0 0 8px #b87c1e;
+            opacity: 0;
+            transition: opacity 0.2s;
+            white-space: nowrap;
+        }
+        #interact-prompt.visible {
+            opacity: 1;
+        }
+
+        /* Уведомления */
+        .notification {
+            position: fixed;
+            top: 25%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.9);
+            color: #b87c1e;
+            padding: 15px 25px;
+            border: 2px solid #b87c1e;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            z-index: 20;
+            text-align: center;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.5s;
+            text-shadow: 0 0 15px #b87c1e;
+            box-shadow: 0 0 40px rgba(184,124,30,0.5);
+            max-width: 85%;
+            word-wrap: break-word;
+        }
+
+        /* ===== МОБИЛЬНОЕ УПРАВЛЕНИЕ ===== */
+        #touch-controls {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 6;
+            pointer-events: none;
+        }
+        #touch-controls.hidden {
+            display: none;
+        }
+
+        /* Джойстик движения */
+        .joystick-zone {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            width: 140px;
+            height: 140px;
+            pointer-events: auto;
+            touch-action: none;
+        }
+        .joystick-base {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 130px;
+            height: 130px;
+            border-radius: 50%;
+            background: rgba(20, 30, 20, 0.35);
+            border: 2px solid rgba(184, 124, 30, 0.4);
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+        }
+        .joystick-stick {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: rgba(184, 124, 30, 0.5);
+            border: 2px solid #b87c1e;
+            box-shadow: 0 0 15px rgba(184, 124, 30, 0.6);
+            transition: transform 0.05s;
+        }
+
+        /* Зона обзора */
+        .look-zone {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 50%;
+            height: 100%;
+            pointer-events: auto;
+            touch-action: none;
+        }
+
+        /* Кнопки действий */
+        .action-buttons {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            pointer-events: none;
+        }
+        .action-btn {
+            width: 65px;
+            height: 65px;
+            border-radius: 50%;
+            background: rgba(20, 30, 20, 0.6);
+            border: 2px solid #b87c1e;
+            color: #b87c1e;
+            font-size: 0.75rem;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            pointer-events: auto;
+            touch-action: manipulation;
+            box-shadow: 0 0 15px rgba(184, 124, 30, 0.3);
+            transition: all 0.1s;
+            text-align: center;
+            line-height: 1;
+            padding: 4px;
+        }
+        .action-btn:active, .action-btn.pressed {
+            background: rgba(184, 124, 30, 0.7);
+            color: #0d0f0d;
+            transform: scale(0.92);
+            box-shadow: 0 0 25px #b87c1e;
+        }
+        .action-btn.jump-btn {
+            background: rgba(30, 50, 30, 0.6);
+        }
+        .action-btn.interact-btn {
+            background: rgba(50, 40, 20, 0.6);
+            border-color: #e8a030;
+            color: #e8a030;
+        }
+
+        /* Верхняя панель на мобильных */
+        #mobile-top-bar {
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            z-index: 7;
+            display: flex;
+            gap: 8px;
+        }
+        #mobile-top-bar .top-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 8px;
+            background: rgba(20, 30, 20, 0.6);
+            border: 2px solid #b87c1e;
+            color: #b87c1e;
+            font-size: 1.2rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            touch-action: manipulation;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+        }
+        #mobile-top-bar .top-btn:active {
+            background: #b87c1e;
+            color: #0d0f0d;
+        }
+
+        /* Скрываем десктопные подсказки на мобильных */
+        .desktop-hint {
+            display: block;
+        }
+        .mobile-hint {
+            display: none;
+        }
+
+        /* Адаптация под горизонтальную ориентацию */
+        @media (orientation: landscape) and (max-height: 500px) {
+            .joystick-zone {
+                width: 110px;
+                height: 110px;
+                bottom: 10px;
+                left: 10px;
+            }
+            .joystick-base {
+                width: 100px;
+                height: 100px;
+            }
+            .joystick-stick {
+                width: 48px;
+                height: 48px;
+            }
+            .action-btn {
+                width: 55px;
+                height: 55px;
+                font-size: 0.65rem;
+            }
+            .action-buttons {
+                bottom: 10px;
+                right: 10px;
+                gap: 8px;
+            }
+            #hud {
+                top: 8px;
+                left: 8px;
+                font-size: 0.75rem;
+            }
+            #hud .mission-name {
+                font-size: 0.9rem;
+            }
+            .menu-box h1 {
+                font-size: 1.5rem;
+            }
+            .menu-box {
+                padding: 15px 20px;
+            }
+            .menu-box button {
+                padding: 10px;
+                font-size: 0.95rem;
+                min-height: 40px;
+            }
+            .menu-box input {
+                padding: 8px 12px;
+                min-height: 38px;
+                font-size: 0.9rem;
+            }
+        }
+
+        /* На мобильных показываем мобильный интерфейс */
+        @media (hover: none) and (pointer: coarse) {
+            .desktop-hint {
+                display: none;
+            }
+            .mobile-hint {
+                display: block;
+            }
+        }
+
+        /* Скрытие элементов на десктопе */
+        @media (hover: hover) and (pointer: fine) {
+            #touch-controls {
+                display: none !important;
+            }
+            #mobile-top-bar {
+                display: none !important;
+            }
+        }
+
+        /* Индикатор здоровья */
+        #health-bar {
+            position: fixed;
+            bottom: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 200px;
+            height: 12px;
+            background: rgba(0,0,0,0.6);
+            border: 2px solid #b87c1e;
+            border-radius: 6px;
+            z-index: 5;
+            overflow: hidden;
+            pointer-events: none;
+        }
+        #health-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #8a2a2a, #b87c1e);
+            width: 100%;
+            transition: width 0.3s;
+            box-shadow: 0 0 10px rgba(184,124,30,0.5);
+        }
+
+        /* Информация об аккаунте в HUD */
+        #player-info-hud {
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            color: #7a8c7a;
+            font-size: 0.75rem;
+            z-index: 5;
+            pointer-events: none;
+            text-align: right;
+        }
+
+        /* Мобильное меню паузы */
+        @media (hover: none) {
+            #player-info-hud {
+                right: 70px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <!-- HUD -->
+        <div id="hud" class="hidden">
+            <div class="mission-name" id="hud-mission">Аномальный материал</div>
+            <div class="objective" id="hud-objective">Найдите образец</div>
+        </div>
+        <div id="player-info-hud" class="hidden"></div>
+        <div id="crosshair" class="hidden"></div>
+        <div id="health-bar" class="hidden">
+            <div id="health-fill"></div>
+        </div>
+        <div id="interact-prompt">Нажмите для взаимодействия</div>
+        <div id="notification" class="notification"></div>
+
+        <!-- Верхняя панель на мобильных -->
+        <div id="mobile-top-bar" class="hidden">
+            <div class="top-btn" id="pause-mobile-btn">⏸</div>
+        </div>
+
+        <!-- Мобильное управление -->
+        <div id="touch-controls" class="hidden">
+            <!-- Джойстик движения -->
+            <div class="joystick-zone" id="move-joystick">
+                <div class="joystick-base"></div>
+                <div class="joystick-stick" id="move-stick"></div>
+            </div>
+
+            <!-- Зона обзора -->
+            <div class="look-zone" id="look-zone"></div>
+
+            <!-- Кнопки действий -->
+            <div class="action-buttons">
+                <div class="action-btn jump-btn" id="jump-btn">ПРЫЖОК</div>
+                <div class="action-btn interact-btn" id="interact-btn">ДЕЙСТВИЕ</div>
+            </div>
+        </div>
+
+        <!-- Меню регистрации -->
+        <div id="register-menu" class="menu-overlay">
+            <div class="menu-box">
+                <h1>SURVIVAL-LIFE</h1>
+                <h2>3</h2>
+                <input type="text" id="reg-username" placeholder="Имя пользователя" autocomplete="off" autocapitalize="off" spellcheck="false">
+                <input type="password" id="reg-password" placeholder="Пароль" autocomplete="off">
+                <button id="register-btn">ЗАРЕГИСТРИРОВАТЬСЯ</button>
+                <button class="small-link" id="go-to-login">Уже есть аккаунт? Войти</button>
+            </div>
+        </div>
+
+        <!-- Меню входа -->
+        <div id="login-menu" class="menu-overlay hidden">
+            <div class="menu-box">
+                <h1>SURVIVAL-LIFE</h1>
+                <h2>ВХОД</h2>
+                <input type="text" id="login-username" placeholder="Имя пользователя" autocomplete="off" autocapitalize="off" spellcheck="false">
+                <input type="password" id="login-password" placeholder="Пароль" autocomplete="off">
+                <button id="login-btn">ВОЙТИ</button>
+                <button class="small-link" id="go-to-register">Нет аккаунта? Зарегистрироваться</button>
+            </div>
+        </div>
+
+        <!-- Главное меню -->
+        <div id="main-menu" class="menu-overlay hidden">
+            <div class="menu-box">
+                <h1>SURVIVAL-LIFE</h1>
+                <h2>3</h2>
+                <div style="color: #7a8c7a; margin-bottom: 15px; font-size: 0.95rem;">Добро пожаловать, <span id="player-name-display" style="color: #b87c1e;"></span></div>
+                <button id="start-game-btn">НАЧАТЬ ИГРУ</button>
+                <button id="logout-btn" class="small-link">Выйти из аккаунта</button>
+            </div>
+        </div>
+
+        <!-- Меню выбора миссий -->
+        <div id="mission-menu" class="menu-overlay hidden">
+            <div class="menu-box">
+                <h1>МИССИИ</h1>
+                <div class="mission-list" id="mission-list-container"></div>
+                <button id="back-to-main-btn" class="small-link">Назад в главное меню</button>
+            </div>
+        </div>
+
+        <!-- Меню паузы -->
+        <div id="pause-menu" class="menu-overlay hidden">
+            <div class="menu-box">
+                <h1>ПАУЗА</h1>
+                <button id="resume-btn">ПРОДОЛЖИТЬ</button>
+                <button id="exit-to-menu-btn">ВЫЙТИ В МЕНЮ</button>
+            </div>
+        </div>
+
+        <!-- Подсказка управления (в главном меню) -->
+        <div id="controls-hint" style="position: fixed; bottom: 10px; left: 0; right: 0; text-align: center; color: #7a8c7a; font-size: 0.75rem; z-index: 5; pointer-events: none; padding: 0 10px;">
+            <span class="desktop-hint">WASD - движение | Мышь - обзор | Пробел - прыжок | E - взаимодействие | ESC - пауза</span>
+            <span class="mobile-hint">Джойстик - движение | Свайп справа - обзор | Кнопки - действия</span>
+        </div>
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.128.0/build/three.module.js"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+
+        // ========== ОПРЕДЕЛЕНИЕ ПЛАТФОРМЫ ==========
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) 
+            || (navigator.maxTouchPoints && navigator.maxTouchPoints > 2)
+            || window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+        
+        console.log('Mobile mode:', isMobile);
+
+        // ========== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ==========
+        let scene, camera, renderer;
+        let player = {
+            pos: new THREE.Vector3(0, 1.7, 5),
+            vel: new THREE.Vector3(0, 0, 0),
+            speed: 5,
+            jumpForce: 8,
+            onGround: true,
+            health: 100
+        };
+        let keys = {};
+        let gameActive = false;
+        let isPaused = false;
+        
+        // Данные игрока
+        let currentUser = null;
+        let users = JSON.parse(localStorage.getItem('hl_users')) || {};
+        
+        // Миссии
+        const missions = [
+            {
+                id: 1,
+                name: 'Аномальный материал',
+                objective: 'Найдите образец',
+                description: 'В лаборатории произошла утечка. Найдите образец.',
+                completed: false
+            },
+            {
+                id: 2,
+                name: 'Выживание',
+                objective: 'Дойдите до выхода',
+                description: 'Доберитесь до аварийного выхода.',
+                completed: false
+            },
+            {
+                id: 3,
+                name: 'Контакт',
+                objective: 'Активируйте спутник',
+                description: 'Активируйте спутниковую связь.',
+                completed: false
+            }
+        ];
+        
+        let currentMissionIndex = 0;
+        
+        // Объекты сцены
+        let objects = {
+            crates: [],
+            doors: [],
+            items: [],
+            npcs: []
+        };
+        
+        // Интерактивные объекты
+        let interactables = [];
+        let nearInteractable = null;
+        
+        // Управление поворотом камеры
+        let targetRotation = { x: 0, y: 0 };
+        let currentRotation = { x: 0, y: 0 };
+        
+        // Мобильное управление
+        let moveVector = { x: 0, y: 0 };
+        let lookDelta = { x: 0, y: 0 };
+        let jumpRequested = false;
+        let interactRequested = false;
+        let joystickActive = false;
+        let lookActive = false;
+        let joystickTouchId = null;
+        let lookTouchId = null;
+        let joystickStart = { x: 0, y: 0 };
+        let lookStart = { x: 0, y: 0 };
+        let lookLast = { x: 0, y: 0 };
+        
+        const JOYSTICK_MAX_DISTANCE = 50;
+        const LOOK_SENSITIVITY = 0.005;
+        
+        // FPS-оптимизация
+        let frameCount = 0;
+        let lastFPSUpdate = 0;
+        let currentFPS = 60;
+        let renderScale = 1;
+        
+        // ========== ИНИЦИАЛИЗАЦИЯ СЦЕНЫ ==========
+        function initScene() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0a0c0a);
+            scene.fog = new THREE.Fog(0x0a0c0a, 10, 45);
+
+            // На мобильных используем меньшее поле зрения для комфорта
+            const fov = isMobile ? 70 : 75;
+            camera = new THREE.PerspectiveCamera(fov, window.innerWidth / window.innerHeight, 0.1, 100);
+            camera.position.copy(player.pos);
+            camera.rotation.order = 'YXZ';
+
+            // Оптимизация рендера для мобильных
+            renderer = new THREE.WebGLRenderer({ 
+                antialias: !isMobile,
+                powerPreference: isMobile ? 'low-power' : 'high-performance',
+                stencil: false,
+                depth: true
+            });
+            
+            // На мобильных используем меньшее разрешение
+            const pixelRatio = isMobile ? Math.min(window.devicePixelRatio, 1.5) : Math.min(window.devicePixelRatio, 2);
+            renderer.setPixelRatio(pixelRatio);
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            
+            // Тени только на десктопе или мощных устройствах
+            renderer.shadowMap.enabled = !isMobile;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            
+            document.getElementById('game-container').appendChild(renderer.domElement);
+
+            // Освещение
+            const ambientLight = new THREE.AmbientLight(0x404040, isMobile ? 0.8 : 0.6);
+            scene.add(ambientLight);
+
+            if (!isMobile) {
+                const dirLight = new THREE.DirectionalLight(0xb87c1e, 0.8);
+                dirLight.position.set(10, 20, 5);
+                dirLight.castShadow = true;
+                dirLight.shadow.mapSize.width = 1024;
+                dirLight.shadow.mapSize.height = 1024;
+                scene.add(dirLight);
+            }
+
+            const pointLight1 = new THREE.PointLight(0xb87c1e, 0.5, 20);
+            pointLight1.position.set(0, 5, 0);
+            scene.add(pointLight1);
+
+            // Пол
+            const floorGeo = new THREE.PlaneGeometry(50, 50);
+            const floorMat = new THREE.MeshStandardMaterial({ color: 0x1a1e1a, roughness: 0.8 });
+            const floor = new THREE.Mesh(floorGeo, floorMat);
+            floor.rotation.x = -Math.PI / 2;
+            floor.receiveShadow = !isMobile;
+            scene.add(floor);
+
+            createWalls();
+            createEnvironment();
+            createMissionObjects();
+            
+            // Адаптация под изменение размера
+            window.addEventListener('resize', onWindowResize);
+            window.addEventListener('orientationchange', () => {
+                setTimeout(onWindowResize, 200);
+            });
+        }
+
+        function onWindowResize() {
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+            
+            // Динамическое разрешение для мобильных
+            if (isMobile) {
+                const pixelRatio = Math.min(window.devicePixelRatio, currentFPS < 30 ? 1 : 1.5);
+                renderer.setPixelRatio(pixelRatio);
+            }
+            
+            renderer.setSize(width, height);
+        }
+
+        function createWalls() {
+            const wallMat = new THREE.MeshStandardMaterial({ color: 0x2a2e2a, roughness: 0.7 });
+            const wallHeight = 4;
+            const wallThickness = 0.5;
+            
+            const walls = [
+                { geo: [20, wallHeight, wallThickness], pos: [0, wallHeight/2, -10] },
+                { geo: [8, wallHeight, wallThickness], pos: [-6, wallHeight/2, 10] },
+                { geo: [8, wallHeight, wallThickness], pos: [6, wallHeight/2, 10] },
+                { geo: [wallThickness, wallHeight, 20], pos: [-10, wallHeight/2, 0] },
+                { geo: [wallThickness, wallHeight, 20], pos: [10, wallHeight/2, 0] },
+            ];
+            
+            walls.forEach(w => {
+                const wall = new THREE.Mesh(new THREE.BoxGeometry(...w.geo), wallMat);
+                wall.position.set(...w.pos);
+                wall.castShadow = !isMobile;
+                wall.receiveShadow = !isMobile;
+                scene.add(wall);
+            });
+            
+            const ceiling = new THREE.Mesh(
+                new THREE.BoxGeometry(20, 0.5, 20), 
+                new THREE.MeshStandardMaterial({ color: 0x1a1e1a })
+            );
+            ceiling.position.set(0, wallHeight, 0);
+            ceiling.receiveShadow = !isMobile;
+            scene.add(ceiling);
+        }
+
+        function createEnvironment() {
+            const crateMat = new THREE.MeshStandardMaterial({ color: 0x4a3a2a, roughness: 0.8 });
+            const cratePositions = [
+                { x: -5, y: 0.5, z: -5 },
+                { x: -4, y: 1.5, z: -5 },
+                { x: 6, y: 0.5, z: -3 },
+                { x: 5, y: 0.5, z: 4 },
+                { x: -7, y: 0.5, z: 6 },
+            ];
+            
+            cratePositions.forEach(pos => {
+                const crate = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), crateMat);
+                crate.position.set(pos.x, pos.y, pos.z);
+                crate.castShadow = !isMobile;
+                crate.receiveShadow = !isMobile;
+                scene.add(crate);
+                objects.crates.push(crate);
+            });
+            
+            const barrelMat = new THREE.MeshStandardMaterial({ color: 0x8a6a3a, roughness: 0.5, metalness: 0.3 });
+            const barrelPositions = [
+                { x: 3, y: 0.5, z: -7 },
+                { x: 4, y: 0.5, z: -6 },
+                { x: -2, y: 0.5, z: 7 },
+            ];
+            
+            barrelPositions.forEach(pos => {
+                const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 1, 8), barrelMat);
+                barrel.position.set(pos.x, pos.y, pos.z);
+                barrel.castShadow = !isMobile;
+                scene.add(barrel);
+            });
+            
+            const pillarMat = new THREE.MeshStandardMaterial({ color: 0x3a3e3a });
+            const pillarPositions = [
+                { x: -8, z: -8 },
+                { x: 8, z: -8 },
+                { x: -8, z: 8 },
+                { x: 8, z: 8 },
+            ];
+            
+            pillarPositions.forEach(pos => {
+                const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 4, 6), pillarMat);
+                pillar.position.set(pos.x, 2, pos.z);
+                pillar.castShadow = !isMobile;
+                scene.add(pillar);
+            });
+            
+            const ventMat = new THREE.MeshStandardMaterial({ color: 0x5a5e5a, metalness: 0.5 });
+            const vent = new THREE.Mesh(new THREE.BoxGeometry(2, 0.5, 0.2), ventMat);
+            vent.position.set(-5, 3, -9.8);
+            scene.add(vent);
+            
+            const lampMat = new THREE.MeshStandardMaterial({ 
+                color: 0xb87c1e, 
+                emissive: 0xb87c1e, 
+                emissiveIntensity: 0.5 
+            });
+            for (let i = -1; i <= 1; i+=2) {
+                for (let j = -1; j <= 1; j+=2) {
+                    const lamp = new THREE.Mesh(new THREE.BoxGeometry(1, 0.2, 0.5), lampMat);
+                    lamp.position.set(i * 5, 3.9, j * 5);
+                    scene.add(lamp);
+                }
+            }
+        }
+
+        function createMissionObjects() {
+            // Образец (миссия 1)
+            const sampleMat = new THREE.MeshStandardMaterial({ 
+                color: 0x00ffaa, 
+                emissive: 0x00aa66, 
+                emissiveIntensity: 0.8 
+            });
+            const sample = new THREE.Mesh(new THREE.SphereGeometry(0.4, isMobile ? 12 : 16, isMobile ? 12 : 16), sampleMat);
+            sample.position.set(7, 1, -7);
+            sample.castShadow = !isMobile;
+            sample.userData = { type: 'sample', missionId: 1, name: 'Аномальный образец' };
+            scene.add(sample);
+            interactables.push(sample);
+            
+            // Дверь выхода (миссия 2)
+            const exitDoorMat = new THREE.MeshStandardMaterial({ 
+                color: 0x8a6a3a, 
+                emissive: 0x4a2a1a, 
+                emissiveIntensity: 0.3 
+            });
+            const exitDoor = new THREE.Mesh(new THREE.BoxGeometry(2, 3, 0.3), exitDoorMat);
+            exitDoor.position.set(0, 1.5, 10.2);
+            exitDoor.castShadow = !isMobile;
+            exitDoor.userData = { type: 'exit_door', missionId: 2, name: 'Аварийный выход' };
+            scene.add(exitDoor);
+            interactables.push(exitDoor);
+            
+            // Спутник (миссия 3)
+            const satelliteMat = new THREE.MeshStandardMaterial({ 
+                color: 0x3a6a8a, 
+                emissive: 0x1a3a5a, 
+                emissiveIntensity: 0.5 
+            });
+            const satellite = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.5, 1.5), satelliteMat);
+            satellite.position.set(-7, 1.5, -7);
+            satellite.castShadow = !isMobile;
+            satellite.userData = { type: 'satellite', missionId: 3, name: 'Спутниковая станция' };
+            scene.add(satellite);
+            interactables.push(satellite);
+        }
+
+        // ========== УПРАВЛЕНИЕ ==========
+        function initControls() {
+            // Клавиатура (для десктопа)
+            document.addEventListener('keydown', (e) => {
+                keys[e.code] = true;
+                if (e.code === 'KeyE' && nearInteractable && gameActive && !isPaused) {
+                    interactWithObject(nearInteractable);
+                }
+                if (e.code === 'Escape' && gameActive) {
+                    togglePause();
+                }
+                // Предотвращаем прокрутку пробелом
+                if (e.code === 'Space') e.preventDefault();
+            });
+            
+            document.addEventListener('keyup', (e) => {
+                keys[e.code] = false;
+            });
+            
+            // Мышь (для десктопа)
+            let isPointerLocked = false;
+            
+            renderer.domElement.addEventListener('click', () => {
+                if (!isMobile && gameActive && !isPaused) {
+                    renderer.domElement.requestPointerLock();
+                }
+            });
+            
+            document.addEventListener('pointerlockchange', () => {
+                isPointerLocked = document.pointerLockElement === renderer.domElement;
+            });
+            
+            document.addEventListener('mousemove', (e) => {
+                if (!isMobile && isPointerLocked && gameActive && !isPaused) {
+                    const sensitivity = 0.002;
+                    targetRotation.y -= e.movementX * sensitivity;
+                    targetRotation.x -= e.movementY * sensitivity;
+                    targetRotation.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, targetRotation.x));
+                }
+            });
+            
+            // ===== МОБИЛЬНОЕ УПРАВЛЕНИЕ =====
+            if (isMobile) {
+                initMobileControls();
+            }
+        }
+
+        function initMobileControls() {
+            const joystickZone = document.getElementById('move-joystick');
+            const joystickStick = document.getElementById('move-stick');
+            const lookZone = document.getElementById('look-zone');
+            const jumpBtn = document.getElementById('jump-btn');
+            const interactBtn = document.getElementById('interact-btn');
+            
+            // === ДЖОЙСТИК ===
+            joystickZone.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const touch = e.changedTouches[0];
+                joystickTouchId = touch.identifier;
+                joystickActive = true;
+                
+                const rect = joystickZone.getBoundingClientRect();
+                joystickStart.x = rect.left + rect.width / 2;
+                joystickStart.y = rect.top + rect.height / 2;
+                
+                updateJoystick(touch.clientX, touch.clientY);
+            }, { passive: false });
+            
+            joystickZone.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    const touch = e.changedTouches[i];
+                    if (touch.identifier === joystickTouchId) {
+                        updateJoystick(touch.clientX, touch.clientY);
+                    }
+                }
+            }, { passive: false });
+            
+            const endJoystick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                joystickActive = false;
+                joystickTouchId = null;
+                moveVector.x = 0;
+                moveVector.y = 0;
+                joystickStick.style.transform = 'translate(-50%, -50%)';
+            };
+            
+            joystickZone.addEventListener('touchend', endJoystick, { passive: false });
+            joystickZone.addEventListener('touchcancel', endJoystick, { passive: false });
+            
+            function updateJoystick(clientX, clientY) {
+                const dx = clientX - joystickStart.x;
+                const dy = clientY - joystickStart.y;
+                const distance = Math.min(Math.sqrt(dx*dx + dy*dy), JOYSTICK_MAX_DISTANCE);
+                const angle = Math.atan2(dy, dx);
+                
+                const stickX = Math.cos(angle) * distance;
+                const stickY = Math.sin(angle) * distance;
+                
+                joystickStick.style.transform = `translate(calc(-50% + ${stickX}px), calc(-50% + ${stickY}px))`;
+                
+                // Нормализованные значения (-1 до 1)
+                moveVector.x = stickX / JOYSTICK_MAX_DISTANCE;
+                moveVector.y = stickY / JOYSTICK_MAX_DISTANCE;
+            }
+            
+            // === ОБЗОР ===
+            lookZone.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const touch = e.changedTouches[0];
+                lookTouchId = touch.identifier;
+                lookActive = true;
+                lookStart.x = touch.clientX;
+                lookStart.y = touch.clientY;
+                lookLast.x = touch.clientX;
+                lookLast.y = touch.clientY;
+            }, { passive: false });
+            
+            lookZone.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    const touch = e.changedTouches[i];
+                    if (touch.identifier === lookTouchId) {
+                        const dx = touch.clientX - lookLast.x;
+                        const dy = touch.clientY - lookLast.y;
+                        
+                        // Накапливаем дельту для плавного поворота
+                        targetRotation.y -= dx * LOOK_SENSITIVITY * 1.5;
+                        targetRotation.x -= dy * LOOK_SENSITIVITY * 1.5;
+                        targetRotation.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, targetRotation.x));
+                        
+                        lookLast.x = touch.clientX;
+                        lookLast.y = touch.clientY;
+                    }
+                }
+            }, { passive: false });
+            
+            const endLook = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                lookActive = false;
+                lookTouchId = null;
+            };
+            
+            lookZone.addEventListener('touchend', endLook, { passive: false });
+            lookZone.addEventListener('touchcancel', endLook, { passive: false });
+            
+            // === КНОПКА ПРЫЖКА ===
+            jumpBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                jumpRequested = true;
+                jumpBtn.classList.add('pressed');
+            }, { passive: false });
+            
+            jumpBtn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                jumpBtn.classList.remove('pressed');
+            }, { passive: false });
+            
+            // === КНОПКА ВЗАИМОДЕЙСТВИЯ ===
+            interactBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                interactRequested = true;
+                interactBtn.classList.add('pressed');
+            }, { passive: false });
+            
+            interactBtn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                interactBtn.classList.remove('pressed');
+            }, { passive: false });
+            
+            // === КНОПКА ПАУЗЫ ===
+            const pauseMobileBtn = document.getElementById('pause-mobile-btn');
+            pauseMobileBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (gameActive) togglePause();
+            }, { passive: false });
+            
+            // Запрет контекстного меню
+            document.addEventListener('contextmenu', (e) => e.preventDefault());
+            
+            // Запрет масштабирования двойным тапом
+            let lastTouchEnd = 0;
+            document.addEventListener('touchend', (e) => {
+                const now = Date.now();
+                if (now - lastTouchEnd <= 300) {
+                    e.preventDefault();
+                }
+                lastTouchEnd = now;
+            }, { passive: false });
+            
+            // Запрет скролла
+            document.body.addEventListener('touchmove', (e) => {
+                if (e.target.closest('.menu-overlay') || e.target.closest('.mission-list')) return;
+                e.preventDefault();
+            }, { passive: false });
+        }
+
+        // ========== ФИЗИКА И ДВИЖЕНИЕ ==========
+        function updatePlayer(delta) {
+            if (!gameActive || isPaused) return;
+            
+            // Направление движения
+            const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+            forward.y = 0;
+            forward.normalize();
+            
+            const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+            right.y = 0;
+            right.normalize();
+            
+            const moveDir = new THREE.Vector3(0, 0, 0);
+            
+            if (isMobile) {
+                // Мобильное управление - джойстик
+                if (moveVector.x !== 0 || moveVector.y !== 0) {
+                    moveDir.add(forward.clone().multiplyScalar(-moveVector.y));
+                    moveDir.add(right.clone().multiplyScalar(moveVector.x));
+                }
+            } else {
+                // Клавиатура
+                if (keys['KeyW'] || keys['ArrowUp']) moveDir.add(forward);
+                if (keys['KeyS'] || keys['ArrowDown']) moveDir.sub(forward);
+                if (keys['KeyA'] || keys['ArrowLeft']) moveDir.sub(right);
+                if (keys['KeyD'] || keys['ArrowRight']) moveDir.add(right);
+            }
+            
+            if (moveDir.length() > 0) {
+                moveDir.normalize();
+                const speed = player.speed * delta;
+                player.pos.x += moveDir.x * speed;
+                player.pos.z += moveDir.z * speed;
+            }
+            
+            // Прыжок
+            const jumpPressed = isMobile ? jumpRequested : keys['Space'];
+            if (jumpPressed && player.onGround) {
+                player.vel.y = player.jumpForce;
+                player.onGround = false;
+            }
+            jumpRequested = false;
+            
+            // Гравитация
+            player.vel.y -= 20 * delta;
+            player.pos.y += player.vel.y * delta;
+            
+            if (player.pos.y <= 1.7) {
+                player.pos.y = 1.7;
+                player.vel.y = 0;
+                player.onGround = true;
+            }
+            
+            // Коллизии с ящиками
+            objects.crates.forEach(crate => {
+                const dx = Math.abs(player.pos.x - crate.position.x);
+                const dz = Math.abs(player.pos.z - crate.position.z);
+                const dy = Math.abs(player.pos.y - crate.position.y);
+                
+                if (dx < 1.2 && dz < 1.2 && dy < 1.5) {
+                    if (player.pos.x > crate.position.x) player.pos.x += 0.1;
+                    else player.pos.x -= 0.1;
+                    if (player.pos.z > crate.position.z) player.pos.z += 0.1;
+                    else player.pos.z -= 0.1;
+                }
+            });
+            
+            // Границы комнаты
+            player.pos.x = Math.max(-9, Math.min(9, player.pos.x));
+            player.pos.z = Math.max(-9, Math.min(9, player.pos.z));
+            
+            camera.position.copy(player.pos);
+            
+            // Проверка близости к интерактивным объектам
+            nearInteractable = null;
+            let minDist = 2.5;
+            interactables.forEach(obj => {
+                const dist = player.pos.distanceTo(obj.position);
+                if (dist < minDist) {
+                    minDist = dist;
+                    nearInteractable = obj;
+                }
+            });
+            
+            const promptEl = document.getElementById('interact-prompt');
+            if (nearInteractable) {
+                promptEl.classList.add('visible');
+                const hint = isMobile ? 'Нажмите ДЕЙСТВИЕ' : 'Нажмите E';
+                promptEl.textContent = hint;
+                
+                // Мобильное взаимодействие
+                if (isMobile && interactRequested) {
+                    interactRequested = false;
+                    interactWithObject(nearInteractable);
+                }
+            } else {
+                promptEl.classList.remove('visible');
+            }
+            interactRequested = false;
+            
+            // Плавный поворот камеры
+            if (gameActive && !isPaused) {
+                currentRotation.x += (targetRotation.x - currentRotation.x) * 0.2;
+                currentRotation.y += (targetRotation.y - currentRotation.y) * 0.2;
+                camera.rotation.x = currentRotation.x;
+                camera.rotation.y = currentRotation.y;
+            }
+        }
+
+        function interactWithObject(obj) {
+            const missionId = obj.userData.missionId;
+            const currentMission = missions[currentMissionIndex];
+            
+            if (currentMission.id === missionId && !currentMission.completed) {
+                currentMission.completed = true;
+                showNotification(`МИССИЯ ВЫПОЛНЕНА: ${currentMission.name}`);
+                updateHUD();
+                saveProgress();
+                
+                if (missions.every(m => m.completed)) {
+                    showNotification('ВСЕ МИССИИ ВЫПОЛНЕНЫ!');
+                    setTimeout(() => exitToMainMenu(), 3000);
+                } else {
+                    const nextMission = missions.findIndex(m => !m.completed);
+                    if (nextMission !== -1) {
+                        currentMissionIndex = nextMission;
+                        updateHUD();
+                        showNotification(`НОВАЯ МИССИЯ: ${missions[currentMissionIndex].name}`);
+                    }
+                }
+            } else if (currentMission.completed) {
+                showNotification('Эта миссия уже выполнена');
+            } else {
+                showNotification('Объект не относится к текущей миссии');
+            }
+        }
+
+        function saveProgress() {
+            if (currentUser && users[currentUser]) {
+                users[currentUser].missions = missions.map(m => ({ completed: m.completed }));
+                localStorage.setItem('hl_users', JSON.stringify(users));
+            }
+        }
+
+        // ========== HUD ==========
+        function updateHUD() {
+            const mission = missions[currentMissionIndex];
+            if (mission) {
+                document.getElementById('hud-mission').textContent = mission.name;
+                document.getElementById('hud-objective').textContent = mission.objective + (mission.completed ? ' ✓' : '');
+            }
+            
+            if (currentUser) {
+                document.getElementById('player-info-hud').textContent = currentUser;
+            }
+            
+            document.getElementById('health-fill').style.width = player.health + '%';
+        }
+
+        function showNotification(text) {
+            const notif = document.getElementById('notification');
+            notif.textContent = text;
+            notif.style.opacity = '1';
+            setTimeout(() => {
+                notif.style.opacity = '0';
+            }, 2500);
+        }
+
+        // ========== ИГРОВОЙ ЦИКЛ ==========
+        let lastTime = 0;
+        function animate(time) {
+            requestAnimationFrame(animate);
+            
+            const delta = Math.min(0.05, (time - lastTime) / 1000);
+            lastTime = time;
+            
+            // FPS-мониторинг для динамического качества
+            frameCount++;
+            if (time - lastFPSUpdate > 1000) {
+                currentFPS = frameCount;
+                frameCount = 0;
+                lastFPSUpdate = time;
+                
+                // Динамическое разрешение
+                if (isMobile) {
+                    if (currentFPS < 25 && renderScale > 0.6) {
+                        renderScale -= 0.1;
+                        renderer.setPixelRatio(Math.min(window.devicePixelRatio, renderScale));
+                    } else if (currentFPS > 50 && renderScale < 1.5) {
+                        renderScale += 0.1;
+                        renderer.setPixelRatio(Math.min(window.devicePixelRatio, renderScale));
+                    }
+                }
+            }
+            
+            if (gameActive && !isPaused) {
+                updatePlayer(delta);
+            }
+            
+            renderer.render(scene, camera);
+        }
+
+        // ========== УПРАВЛЕНИЕ ИНТЕРФЕЙСОМ ==========
+        function showMenu(menuId) {
+            document.querySelectorAll('.menu-overlay').forEach(m => m.classList.add('hidden'));
+            if (menuId) {
+                document.getElementById(menuId).classList.remove('hidden');
+            }
+        }
+
+        function startGame() {
+            document.getElementById('hud').classList.remove('hidden');
+            document.getElementById('crosshair').classList.remove('hidden');
+            document.getElementById('health-bar').classList.remove('hidden');
+            document.getElementById('player-info-hud').classList.remove('hidden');
+            
+            // Показываем мобильное управление
+            if (isMobile) {
+                document.getElementById('touch-controls').classList.remove('hidden');
+                document.getElementById('mobile-top-bar').classList.remove('hidden');
+            }
+            
+            showMenu(null);
+            
+            // Сброс позиции
+            player.pos.set(0, 1.7, 5);
+            player.vel.set(0, 0, 0);
+            player.health = 100;
+            camera.position.copy(player.pos);
+            
+            targetRotation = { x: 0, y: 0 };
+            currentRotation = { x: 0, y: 0 };
+            camera.rotation.set(0, 0, 0);
+            
+            // Сброс управления
+            moveVector = { x: 0, y: 0 };
+            jumpRequested = false;
+            interactRequested = false;
+            
+            updateHUD();
+            
+            gameActive = true;
+            isPaused = false;
+            
+            // На десктопе запрашиваем pointer lock
+            if (!isMobile) {
+                renderer.domElement.requestPointerLock();
+            }
+        }
+
+        function exitToMainMenu() {
+            gameActive = false;
+            isPaused = false;
+            
+            document.getElementById('hud').classList.add('hidden');
+            document.getElementById('crosshair').classList.add('hidden');
+            document.getElementById('health-bar').classList.add('hidden');
+            document.getElementById('player-info-hud').classList.add('hidden');
+            document.getElementById('interact-prompt').classList.remove('visible');
+            
+            if (isMobile) {
+                document.getElementById('touch-controls').classList.add('hidden');
+                document.getElementById('mobile-top-bar').classList.add('hidden');
+            }
+            
+            if (document.pointerLockElement) {
+                document.exitPointerLock();
+            }
+            
+            moveVector = { x: 0, y: 0 };
+            keys = {};
+            
+            showMenu('main-menu');
+            updateMissionList();
+        }
+
+        function togglePause() {
+            isPaused = !isPaused;
+            if (isPaused) {
+                if (document.pointerLockElement) document.exitPointerLock();
+                showMenu('pause-menu');
+                if (isMobile) {
+                    document.getElementById('touch-controls').classList.add('hidden');
+                }
+            } else {
+                showMenu(null);
+                if (!isMobile) {
+                    renderer.domElement.requestPointerLock();
+                }
+                if (isMobile) {
+                    document.getElementById('touch-controls').classList.remove('hidden');
+                }
+            }
+        }
+
+        // ========== РЕГИСТРАЦИЯ ==========
+        function registerUser(username, password) {
+            if (!username || !password) {
+                alert('Заполните все поля');
+                return false;
+            }
+            if (username.length < 3) {
+                alert('Имя пользователя: минимум 3 символа');
+                return false;
+            }
+            if (password.length < 4) {
+                alert('Пароль: минимум 4 символа');
+                return false;
+            }
+            if (users[username]) {
+                alert('Пользователь уже существует');
+                return false;
+            }
+            
+            users[username] = {
+                password: password,
+                missions: missions.map(m => ({ completed: false }))
+            };
+            localStorage.setItem('hl_users', JSON.stringify(users));
+            return true;
+        }
+
+        function loginUser(username, password) {
+            if (!users[username]) {
+                alert('Пользователь не найден');
+                return false;
+            }
+            if (users[username].password !== password) {
+                alert('Неверный пароль');
+                return false;
+            }
+            return true;
+        }
+
+        function updateMissionList() {
+            const container = document.getElementById('mission-list-container');
+            if (!container) return;
+            
+            container.innerHTML = '';
+            missions.forEach((mission, index) => {
+                const item = document.createElement('div');
+                item.className = `mission-item ${index === currentMissionIndex && gameActive ? 'active' : ''} ${mission.completed ? 'completed' : ''}`;
+                item.innerHTML = `
+                    <span>${mission.name}</span>
+                    <span class="status">${mission.completed ? '✓' : '○'}</span>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        // ========== ИНИЦИАЛИЗАЦИЯ ==========
+        window.onload = () => {
+            initScene();
+            initControls();
+            animate(0);
+            
+            const savedUsers = localStorage.getItem('hl_users');
+            if (savedUsers) {
+                users = JSON.parse(savedUsers);
+            }
+            
+            // Обработчики меню
+            document.getElementById('go-to-login').onclick = () => showMenu('login-menu');
+            document.getElementById('go-to-register').onclick = () => showMenu('register-menu');
+            
+            document.getElementById('register-btn').onclick = () => {
+                const username = document.getElementById('reg-username').value.trim();
+                const password = document.getElementById('reg-password').value;
+                if (registerUser(username, password)) {
+                    alert('Регистрация успешна! Войдите.');
+                    document.getElementById('login-username').value = username;
+                    document.getElementById('login-password').value = '';
+                    showMenu('login-menu');
+                }
+            };
+            
+            document.getElementById('login-btn').onclick = () => {
+                const username = document.getElementById('login-username').value.trim();
+                const password = document.getElementById('login-password').value;
+                if (loginUser(username, password)) {
+                    currentUser = username;
+                    document.getElementById('player-name-display').textContent = username;
+                    
+                    if (users[username].missions) {
+                        users[username].missions.forEach((savedMission, idx) => {
+                            if (missions[idx]) {
+                                missions[idx].completed = savedMission.completed;
+                            }
+                        });
+                    }
+                    
+                    showMenu('main-menu');
+                }
+            };
+            
+            document.getElementById('start-game-btn').onclick = () => {
+                const firstIncomplete = missions.findIndex(m => !m.completed);
+                if (firstIncomplete !== -1) {
+                    currentMissionIndex = firstIncomplete;
+                } else {
+                    currentMissionIndex = 0;
+                    missions.forEach(m => m.completed = false);
+                }
+                updateHUD();
+                startGame();
+            };
+            
+            document.getElementById('back-to-main-btn').onclick = () => {
+                showMenu('main-menu');
+            };
+            
+            document.getElementById('logout-btn').onclick = () => {
+                currentUser = null;
+                showMenu('register-menu');
+            };
+            
+            document.getElementById('resume-btn').onclick = () => {
+                togglePause();
+            };
+            
+            document.getElementById('exit-to-menu-btn').onclick = () => {
+                exitToMainMenu();
+            };
+            
+            // Поддержка ввода по Enter
+            document.getElementById('reg-password').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') document.getElementById('register-btn').click();
+            });
+            document.getElementById('login-password').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') document.getElementById('login-btn').click();
+            });
+            
+            // Показываем меню регистрации
+            showMenu('register-menu');
+        };
+    </script>
+</body>
+  </html>
