@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Survival-Life 3</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+            background-color: black;
+            color: #e0e0e0;
+        }
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+        canvas {
+            display: block;
+        }
+        .menu-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            backdrop-filter: blur(4px);
+            transition: opacity 0.5s;
+        }
+        .hidden {
+            display: none !important;
+        }
+        .menu-box {
+            background: #1a1e1a;
+            border: 3px solid #b87c1e;
+            padding: 40px 60px;
+            border-radius: 8px;
+            box-shadow: 0 0 40px rgba(184, 124, 30, 0.4);
+            text-align: center;
+            min-width: 400px;
+        }
+        .menu-box h1 {
+            font-size: 3.5rem;
+            margin: 0 0 10px;
+            color: #b87c1e;
+            text-shadow: 0 0 15px #b87c1e;
+            letter-spacing: 4px;
+            font-weight: 700;
+        }
+        .menu-box h2 {
+            font-size: 1.5rem;
+            margin: 0 0 30px;
+            color: #7a8c7a;
+            font-weight: 400;
+            letter-spacing: 2px;
+        }
+        .menu-box input {
+            display: block;
+            width: 100%;
+            padding: 12px 15px;
+            margin: 12px 0;
+            background: #0d0f0d;
+            border: 2px solid #3a4a3a;
+            color: #b87c1e;
+            font-size: 1.2rem;
+            font-family: 'Courier New', monospace;
+            border-radius: 4px;
+            box-sizing: border-box;
+            outline: none;
+            transition: border 0.2s;
+        }
+        .menu-box input:focus {
+            border-color: #b87c1e;
+        }
+        .menu-box button {
+            display: block;
+            width: 100%;
+            padding: 14px;
+            margin: 20px 0 10px;
+            background: #2a2e2a;
+            border: 2px solid #b87c1e;
+            color: #b87c1e;
+            font-size: 1.4rem;
+            font-weight: 700;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 2px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.2s;
+            text-transform: uppercase;
+        }
+        .menu-box button:hover {
+            background: #b87c1e;
+            color: #0d0f0d;
+            box-shadow: 0 0 25px #b87c1e;
+        }
+        .menu-box button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            background: #2a2e2a;
+            color: #7a8c7a;
+            border-color: #3a4a3a;
+            box-shadow: none;
+        }
+        .menu-box .small-link {
+            color: #7a8c7a;
+            margin-top: 20px;
+            font-size: 1rem;
+            cursor: pointer;
+            text-decoration: underline;
+            background: none;
+            border: none;
+            font-family: 'Courier New', monospace;
+        }
+        .menu-box .small-link:hover {
+            color: #b87c1e;
+        }
+        .mission-list {
+            text-align: left;
+            margin: 20px 0;
+            background: #0d0f0d;
+            padding: 20px;
+            border-radius: 4px;
+            border: 1px solid #3a4a3a;
+        }
+        .mission-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            border-bottom: 1px solid #2a2e2a;
+            color: #7a8c7a;
+        }
+        .mission-item.active {
+            color: #b87c1e;
+            font-weight: bold;
+            text-shadow: 0 0 8px #b87c1e;
+        }
+        .mission-item .status {
+            font-size: 0.9rem;
+        }
+        .mission-item.completed .status {
+            color: #4a8c4a;
+        }
+        #hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 5;
+            color: #b87c1e;
+            text-shadow: 0 0 8px rgba(184, 124, 30, 0.7);
+            font-size: 1.2rem;
+            pointer-events: none;
+        }
+        #hud .mission-name {
+            font-size: 1.6rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        #hud .objective {
+            color: #7a8c7a;
+            font-size: 1rem;
+        }
+        #crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 20px;
+            height: 20px;
+            transform: translate(-50%, -50%);
+            border: 2px solid #b87c1e;
+            border-radius: 50%;
+            z-index: 5;
+            pointer-events: none;
+            opacity: 0.6;
+            box-shadow: 0 0 10px #b87c1e;
+        }
+        #interact-prompt {
+            position: absolute;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #b87c1e;
+            background: rgba(0,0,0,0.7);
+            padding: 10px 20px;
+            border: 1px solid #b87c1e;
+            border-radius: 4px;
+            font-size: 1.2rem;
+            z-index: 5;
+            pointer-events: none;
+            text-shadow: 0 0 8px #b87c1e;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .notification {
+            position: absolute;
+            top: 30%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.9);
+            color: #b87c1e;
+            padding: 20px 40px;
+            border: 2px solid #b87c1e;
+            border-radius: 8px;
+            font-size: 1.8rem;
+            z-index: 20;
+            text-align: center;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.5s;
+            text-shadow: 0 0 15px #b87c1e;
+            box-shadow: 0 0 40px rgba(184,124,30,0.5);
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <!-- HUD -->
+        <div id="hud" class="hidden">
+            <div class="mission-name" id="hud-mission">Аномальный материал</div>
+            <div class="objective" id="hud-objective">Найдите образец</div>
+        </div>
+        <div id="crosshair" class="hidden"></div>
+        <div id="interact-prompt" class="hidden">Нажмите E для взаимодействия</div>
+        <div id="notification" class="notification"></div>
+
+        <!-- Меню регистрации -->
+        <div id="register-menu" class="menu-overlay">
+            <div class="menu-box">
+                <h1>SURVIVAL-LIFE</h1>
+                <h2>3</h2>
+                <input type="text" id="reg-username" placeholder="Имя пользователя" autocomplete="off">
+                <input type="password" id="reg-password" placeholder="Пароль" autocomplete="off">
+                <button id="register-btn">ЗАРЕГИСТРИРОВАТЬСЯ</button>
+                <button class="small-link" id="go-to-login">Уже есть аккаунт? Войти</button>
+            </div>
+        </div>
+
+        <!-- Меню входа -->
+        <div id="login-menu" class="menu-overlay hidden">
+            <div class="menu-box">
+                <h1>SURVIVAL-LIFE</h1>
+                <h2>ВХОД</h2>
+                <input type="text" id="login-username" placeholder="Имя пользователя" autocomplete="off">
+                <input type="password" id="login-password" placeholder="Пароль" autocomplete="off">
+                <button id="login-btn">ВОЙТИ</button>
+                <button class="small-link" id="go-to-register">Нет аккаунта? Зарегистрироваться</button>
+            </div>
+        </div>
+
+        <!-- Главное меню -->
+        <div id="main-menu" class="menu-overlay hidden">
+            <div class="menu-box">
+                <h1>SURVIVAL-LIFE</h1>
+                <h2>3</h2>
+                <div style="color: #7a8c7a; margin-bottom: 20px;">Добро пожаловать, <span id="player-name-display" style="color: #b87c1e;"></span></div>
+                <button id="start-game-btn">НАЧАТЬ ИГРУ</button>
+                <button id="logout-btn" class="small-link">Выйти из аккаунта</button>
+            </div>
+        </div>
+
+        <!-- Меню выбора миссий -->
+        <div id="mission-menu" class="menu-overlay hidden">
+            <div class="menu-box">
+                <h1>МИССИИ</h1>
+                <div class="mission-list" id="mission-list-container">
+                    <!-- Заполняется через JS -->
+                </div>
+                <button id="back-to-main-btn" class="small-link">Назад в главное меню</button>
+            </div>
+        </div>
+
+        <!-- Меню паузы -->
+        <div id="pause-menu" class="menu-overlay hidden">
+            <div class="menu-box">
+                <h1>ПАУЗА</h1>
+                <button id="resume-btn">ПРОДОЛЖИТЬ</button>
+                <button id="exit-to-menu-btn">ВЫЙТИ В МЕНЮ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Подключаем Three.js -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.128.0/build/three.module.js"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+
+        // ========== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ==========
+        let scene, camera, renderer;
+        let player = {
+            pos: new THREE.Vector3(0, 1.7, 5),
+            vel: new THREE.Vector3(0, 0, 0),
+            speed: 5,
+            jumpForce: 8,
+            onGround: true,
+            health: 100,
+            armor: 0
+        };
+        let keys = {};
+        let gameActive = false;
+        let isPaused = false;
+        
+        // Данные игрока
+        let currentUser = null;
+        let users = JSON.parse(localStorage.getItem('hl_users')) || {};
+        
+        // Миссии
+        const missions = [
+            {
+                id: 1,
+                name: 'Аномальный материал',
+                objective: 'Найдите образец',
+                description: 'В лаборатории произошла утечка. Найдите образец и принесите его в комнату управления.',
+                completed: false
+            },
+            {
+                id: 2,
+                name: 'Выживание',
+                objective: 'Дойдите до выхода',
+                description: 'Системы безопасности отключены. Доберитесь до аварийного выхода.',
+                completed: false
+            },
+            {
+                id: 3,
+                name: 'Контакт',
+                objective: 'Активируйте спутник',
+                description: 'Активируйте спутниковую связь в командном центре.',
+                completed: false
+            }
+        ];
+        
+        let currentMissionIndex = 0;
+        let missionActive = false;
+        
+        // Объекты сцены
+        let objects = {
+            crates: [],
+            doors: [],
+            items: [],
+            npcs: []
+        };
+        
+        // Интерактивные объекты
+        let interactables = [];
+        let nearInteractable = null;
+        
+        // Инициализация Three.js сцены
+        function initScene() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0a0c0a);
+            scene.fog = new THREE.Fog(0x0a0c0a, 10, 50);
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.copy(player.pos);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.getElementById('game-container').appendChild(renderer.domElement);
+
+            // Освещение
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xb87c1e, 0.8);
+            dirLight.position.set(10, 20, 5);
+            dirLight.castShadow = true;
+            dirLight.shadow.mapSize.width = 1024;
+            dirLight.shadow.mapSize.height = 1024;
+            scene.add(dirLight);
+
+            // Точечные источники для атмосферы
+            const pointLight1 = new THREE.PointLight(0xb87c1e, 0.5, 20);
+            pointLight1.position.set(0, 5, 0);
+            scene.add(pointLight1);
+
+            // Пол
+            const floorGeo = new THREE.PlaneGeometry(50, 50);
+            const floorMat = new THREE.MeshStandardMaterial({ color: 0x1a1e1a, roughness: 0.8 });
+            const floor = new THREE.Mesh(floorGeo, floorMat);
+            floor.rotation.x = -Math.PI / 2;
+            floor.receiveShadow = true;
+            scene.add(floor);
+
+            // Стены (создаем комнату)
+            createWalls();
+            
+            // Создаем объекты окружения
+            createEnvironment();
+            
+            // Создаем NPC/предметы для миссий
+            createMissionObjects();
+        }
+
+        function createWalls() {
+            const wallMat = new THREE.MeshStandardMaterial({ color: 0x2a2e2a, roughness: 0.7 });
+            const wallHeight = 4;
+            const wallThickness = 0.5;
+            
+            // Задняя стена
+            const backWall = new THREE.Mesh(new THREE.BoxGeometry(20, wallHeight, wallThickness), wallMat);
+            backWall.position.set(0, wallHeight/2, -10);
+            backWall.castShadow = true;
+            backWall.receiveShadow = true;
+            scene.add(backWall);
+            
+            // Передняя стена с проемом
+            const frontWallLeft = new THREE.Mesh(new THREE.BoxGeometry(8, wallHeight, wallThickness), wallMat);
+            frontWallLeft.position.set(-6, wallHeight/2, 10);
+            frontWallLeft.castShadow = true;
+            frontWallLeft.receiveShadow = true;
+            scene.add(frontWallLeft);
+            
+            const frontWallRight = new THREE.Mesh(new THREE.BoxGeometry(8, wallHeight, wallThickness), wallMat);
+            frontWallRight.position.set(6, wallHeight/2, 10);
+            frontWallRight.castShadow = true;
+            frontWallRight.receiveShadow = true;
+            scene.add(frontWallRight);
+            
+            // Левая стена
+            const leftWall = new THREE.Mesh(new THREE.BoxGeometry(wallThickness, wallHeight, 20), wallMat);
+            leftWall.position.set(-10, wallHeight/2, 0);
+            leftWall.castShadow = true;
+            leftWall.receiveShadow = true;
+            scene.add(leftWall);
+            
+            // Правая стена
+            const rightWall = new THREE.Mesh(new THREE.BoxGeometry(wallThickness, wallHeight, 20), wallMat);
+            rightWall.position.set(10, wallHeight/2, 0);
+            rightWall.castShadow = true;
+            rightWall.receiveShadow = true;
+            scene.add(rightWall);
+            
+            // Потолок
+            const ceiling = new THREE.Mesh(new THREE.BoxGeometry(20, 0.5, 20), new THREE.MeshStandardMaterial({ color: 0x1a1e1a }));
+            ceiling.position.set(0, wallHeight, 0);
+            ceiling.receiveShadow = true;
+            scene.add(ceiling);
+        }
+
+        function createEnvironment() {
+            // Ящики
+            const crateMat = new THREE.MeshStandardMaterial({ color: 0x4a3a2a, roughness: 0.8 });
+            const cratePositions = [
+                { x: -5, y: 0.5, z: -5 },
+                { x: -4, y: 1.5, z: -5 },
+                { x: 6, y: 0.5, z: -3 },
+                { x: 5, y: 0.5, z: 4 },
+                { x: -7, y: 0.5, z: 6 },
+            ];
+            
+            cratePositions.forEach(pos => {
+                const crate = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), crateMat);
+                crate.position.set(pos.x, pos.y, pos.z);
+                crate.castShadow = true;
+                crate.receiveShadow = true;
+                scene.add(crate);
+                objects.crates.push(crate);
+            });
+            
+            // Бочки
+            const barrelMat = new THREE.MeshStandardMaterial({ color: 0x8a6a3a, roughness: 0.5, metalness: 0.3 });
+            const barrelPositions = [
+                { x: 3, y: 0.5, z: -7 },
+                { x: 4, y: 0.5, z: -6 },
+                { x: -2, y: 0.5, z: 7 },
+            ];
+            
+            barrelPositions.forEach(pos => {
+                const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 1, 8), barrelMat);
+                barrel.position.set(pos.x, pos.y, pos.z);
+                barrel.castShadow = true;
+                barrel.receiveShadow = true;
+                scene.add(barrel);
+            });
+            
+            // Колонны
+            const pillarMat = new THREE.MeshStandardMaterial({ color: 0x3a3e3a });
+            const pillarPositions = [
+                { x: -8, z: -8 },
+                { x: 8, z: -8 },
+                { x: -8, z: 8 },
+                { x: 8, z: 8 },
+            ];
+            
+            pillarPositions.forEach(pos => {
+                const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 4, 8), pillarMat);
+                pillar.position.set(pos.x, 2, pos.z);
+                pillar.castShadow = true;
+                pillar.receiveShadow = true;
+                scene.add(pillar);
+            });
+            
+            // Вентиляция (декоративная)
+            const ventMat = new THREE.MeshStandardMaterial({ color: 0x5a5e5a, metalness: 0.5 });
+            const vent = new THREE.Mesh(new THREE.BoxGeometry(2, 0.5, 0.2), ventMat);
+            vent.position.set(-5, 3, -9.8);
+            scene.add(vent);
+            
+            // Лампы на потолке
+            const lampMat = new THREE.MeshStandardMaterial({ color: 0xb87c1e, emissive: 0xb87c1e, emissiveIntensity: 0.5 });
+            for (let i = -1; i <= 1; i+=2) {
+                for (let j = -1; j <= 1; j+=2) {
+                    const lamp = new THREE.Mesh(new THREE.BoxGeometry(1, 0.2, 0.5), lampMat);
+                    lamp.position.set(i * 5, 3.9, j * 5);
+                    scene.add(lamp);
+                }
+            }
+        }
+
+        function createMissionObjects() {
+            // Объект для миссии 1 - образец
+            const sampleMat = new THREE.MeshStandardMaterial({ color: 0x00ffaa, emissive: 0x00aa66, emissiveIntensity: 0.8 });
+            const sample = new THREE.Mesh(new THREE.SphereGeometry(0.4, 16, 16), sampleMat);
+            sample.position.set(7, 1, -7);
+            sample.castShadow = true;
+            sample.userData = { type: 'sample', missionId: 1, name: 'Аномальный образец' };
+            scene.add(sample);
+            interactables.push(sample);
+            
+            // Объект для миссии 2 - дверь выхода
+            const exitDoorMat = new THREE.MeshStandardMaterial({ color: 0x8a6a3a, emissive: 0x4a2a1a, emissiveIntensity: 0.3 });
+            const exitDoor = new THREE.Mesh(new THREE.BoxGeometry(2, 3, 0.3), exitDoorMat);
+            exitDoor.position.set(0, 1.5, 10.2);
+            exitDoor.castShadow = true;
+            exitDoor.userData = { type: 'exit_door', missionId: 2, name: 'Аварийный выход' };
+            scene.add(exitDoor);
+            interactables.push(exitDoor);
+            
+            // Объект для миссии 3 - спутник
+            const satelliteMat = new THREE.MeshStandardMaterial({ color: 0x3a6a8a, emissive: 0x1a3a5a, emissiveIntensity: 0.5 });
+            const satellite = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.5, 1.5), satelliteMat);
+            satellite.position.set(-7, 1.5, -7);
+            satellite.castShadow = true;
+            satellite.userData = { type: 'satellite', missionId: 3, name: 'Спутниковая станция' };
+            scene.add(satellite);
+            interactables.push(satellite);
+        }
+
+        // ========== УПРАВЛЕНИЕ ==========
+        function initControls() {
+            document.addEventListener('keydown', (e) => {
+                keys[e.code] = true;
+                if (e.code === 'KeyE' && nearInteractable && gameActive && !isPaused) {
+                    interactWithObject(nearInteractable);
+                }
+                if (e.code === 'Escape' && gameActive) {
+                    togglePause();
+                }
+            });
+            
+            document.addEventListener('keyup', (e) => {
+                keys[e.code] = false;
+            });
+            
+            // Управление мышью
+            let isPointerLocked = false;
+            let mouseX = 0, mouseY = 0;
+            let targetRotation = { x: 0, y: 0 };
+            let currentRotation = { x: 0, y: 0 };
+            
+            renderer.domElement.addEventListener('click', () => {
+                if (gameActive && !isPaused) {
+                    renderer.domElement.requestPointerLock();
+                }
+            });
+            
+            document.addEventListener('pointerlockchange', () => {
+                isPointerLocked = document.pointerLockElement === renderer.domElement;
+            });
+            
+            document.addEventListener('mousemove', (e) => {
+                if (isPointerLocked && gameActive && !isPaused) {
+                    const sensitivity = 0.002;
+                    targetRotation.y -= e.movementX * sensitivity;
+                    targetRotation.x -= e.movementY * sensitivity;
+                    targetRotation.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, targetRotation.x));
+                }
+            });
+            
+            // Плавное вращение
+            function updateRotation() {
+                if (!gameActive || isPaused) return;
+                currentRotation.x += (targetRotation.x - currentRotation.x) * 0.15;
+                currentRotation.y += (targetRotation.y - currentRotation.y) * 0.15;
+                camera.rotation.order = 'YXZ';
+                camera.rotation.x = currentRotation.x;
+                camera.rotation.y = currentRotation.y;
+            }
+            
+            // Сохраняем функцию для вызова в animate
+            window.updateRotation = updateRotation;
+        }
+
+        // ========== ФИЗИКА И ДВИЖЕНИЕ ==========
+        function updatePlayer(delta) {
+            if (!gameActive || isPaused) return;
+            
+            const speed = player.speed * delta;
+            const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+            forward.y = 0;
+            forward.normalize();
+            
+            const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+            right.y = 0;
+            right.normalize();
+            
+            const moveDir = new THREE.Vector3(0, 0, 0);
+            if (keys['KeyW'] || keys['ArrowUp']) moveDir.add(forward);
+            if (keys['KeyS'] || keys['ArrowDown']) moveDir.sub(forward);
+            if (keys['KeyA'] || keys['ArrowLeft']) moveDir.sub(right);
+            if (keys['KeyD'] || keys['ArrowRight']) moveDir.add(right);
+            
+            if (moveDir.length() > 0) {
+                moveDir.normalize();
+                player.pos.x += moveDir.x * speed;
+                player.pos.z += moveDir.z * speed;
+            }
+            
+            // Прыжок и гравитация
+            if (keys['Space'] && player.onGround) {
+                player.vel.y = player.jumpForce;
+                player.onGround = false;
+            }
+            
+            player.vel.y -= 20 * delta; // Гравитация
+            player.pos.y += player.vel.y * delta;
+            
+            if (player.pos.y <= 1.7) {
+                player.pos.y = 1.7;
+                player.vel.y = 0;
+                player.onGround = true;
+            }
+            
+            // Коллизии с ящиками (упрощенно)
+            objects.crates.forEach(crate => {
+                const dx = Math.abs(player.pos.x - crate.position.x);
+                const dz = Math.abs(player.pos.z - crate.position.z);
+                const dy = Math.abs(player.pos.y - crate.position.y);
+                
+                if (dx < 1.2 && dz < 1.2 && dy < 1.5) {
+                    // Отталкиваем
+                    if (player.pos.x > crate.position.x) player.pos.x += 0.1;
+                    else player.pos.x -= 0.1;
+                    if (player.pos.z > crate.position.z) player.pos.z += 0.1;
+                    else player.pos.z -= 0.1;
+                }
+            });
+            
+            // Границы комнаты
+            player.pos.x = Math.max(-9, Math.min(9, player.pos.x));
+            player.pos.z = Math.max(-9, Math.min(9, player.pos.z));
+            
+            camera.position.copy(player.pos);
+            
+            // Проверка близости к интерактивным объектам
+            nearInteractable = null;
+            let minDist = 2.5;
+            interactables.forEach(obj => {
+                const dist = player.pos.distanceTo(obj.position);
+                if (dist < minDist) {
+                    minDist = dist;
+                    nearInteractable = obj;
+                }
+            });
+            
+            const promptEl = document.getElementById('interact-prompt');
+            if (nearInteractable) {
+                promptEl.classList.remove('hidden');
+            } else {
+                promptEl.classList.add('hidden');
+            }
+        }
+
+        function interactWithObject(obj) {
+            const type = obj.userData.type;
+            const missionId = obj.userData.missionId;
+            
+            // Проверяем, соответствует ли объект текущей миссии
+            const currentMission = missions[currentMissionIndex];
+            if (currentMission.id === missionId && !currentMission.completed) {
+                // Выполняем миссию
+                currentMission.completed = true;
+                showNotification(`МИССИЯ ВЫПОЛНЕНА: ${currentMission.name}`);
+                
+                // Обновляем HUD
+                updateHUD();
+                
+                // Проверяем, все ли миссии выполнены
+                if (missions.every(m => m.completed)) {
+                    showNotification('ВСЕ МИССИИ ВЫПОЛНЕНЫ! ВЫ ПОБЕДИЛИ!');
+                    setTimeout(() => {
+                        exitToMainMenu();
+                    }, 3000);
+                } else {
+                    // Переходим к следующей миссии
+                    const nextMission = missions.findIndex(m => !m.completed);
+                    if (nextMission !== -1) {
+                        currentMissionIndex = nextMission;
+                        updateHUD();
+                        showNotification(`НОВАЯ МИССИЯ: ${missions[currentMissionIndex].name}`);
+                    }
+                }
+            } else {
+                showNotification(`Объект не относится к текущей миссии`);
+            }
+        }
+
+        // ========== HUD ==========
+        function updateHUD() {
+            const mission = missions[currentMissionIndex];
+            if (mission) {
+                document.getElementById('hud-mission').textContent = mission.name;
+                document.getElementById('hud-objective').textContent = mission.objective + (mission.completed ? ' ✓' : '');
+            }
+        }
+
+        function showNotification(text) {
+            const notif = document.getElementById('notification');
+            notif.textContent = text;
+            notif.style.opacity = '1';
+            setTimeout(() => {
+                notif.style.opacity = '0';
+            }, 2500);
+        }
+
+        // ========== ИГРОВОЙ ЦИКЛ ==========
+        let lastTime = 0;
+        function animate(time) {
+            requestAnimationFrame(animate);
+            
+            const delta = Math.min(0.05, (time - lastTime) / 1000);
+            lastTime = time;
+            
+            if (gameActive && !isPaused) {
+                updatePlayer(delta);
+                if (window.updateRotation) window.updateRotation();
+            }
+            
+            renderer.render(scene, camera);
+        }
+
+        // ========== УПРАВЛЕНИЕ ИНТЕРФЕЙСОМ ==========
+        function showMenu(menuId) {
+            document.querySelectorAll('.menu-overlay').forEach(m => m.classList.add('hidden'));
+            if (menuId) {
+                document.getElementById(menuId).classList.remove('hidden');
+            }
+        }
+
+        function startGame() {
+            document.getElementById('hud').classList.remove('hidden');
+            document.getElementById('crosshair').classList.remove('hidden');
+            showMenu(null);
+            
+            // Сброс позиции игрока
+            player.pos.set(0, 1.7, 5);
+            player.vel.set(0, 0, 0);
+            camera.position.copy(player.pos);
+            camera.rotation.set(0, 0, 0);
+            
+            // Сброс миссий
+            missions.forEach(m => m.completed = false);
+            currentMissionIndex = 0;
+            updateHUD();
+            
+            gameActive = true;
+            isPaused = false;
+            
+            // Запрос блокировки указателя
+            renderer.domElement.requestPointerLock();
+        }
+
+        function exitToMainMenu() {
+            gameActive = false;
+            isPaused = false;
+            document.getElementById('hud').classList.add('hidden');
+            document.getElementById('crosshair').classList.add('hidden');
+            document.getElementById('interact-prompt').classList.add('hidden');
+            if (document.pointerLockElement) {
+                document.exitPointerLock();
+            }
+            showMenu('main-menu');
+            updateMissionList();
+        }
+
+        function togglePause() {
+            isPaused = !isPaused;
+            if (isPaused) {
+                if (document.pointerLockElement) document.exitPointerLock();
+                showMenu('pause-menu');
+            } else {
+                showMenu(null);
+                renderer.domElement.requestPointerLock();
+            }
+        }
+
+        // ========== СИСТЕМА РЕГИСТРАЦИИ ==========
+        function registerUser(username, password) {
+            if (!username || !password) {
+                alert('Заполните все поля');
+                return false;
+            }
+            if (username.length < 3) {
+                alert('Имя пользователя должно быть не менее 3 символов');
+                return false;
+            }
+            if (password.length < 4) {
+                alert('Пароль должен быть не менее 4 символов');
+                return false;
+            }
+            if (users[username]) {
+                alert('Пользователь уже существует');
+                return false;
+            }
+            
+            users[username] = {
+                password: password,
+                missions: missions.map(m => ({ ...m, completed: false }))
+            };
+            localStorage.setItem('hl_users', JSON.stringify(users));
+            return true;
+        }
+
+        function loginUser(username, password) {
+            if (!users[username]) {
+                alert('Пользователь не найден');
+                return false;
+            }
+            if (users[username].password !== password) {
+                alert('Неверный пароль');
+                return false;
+            }
+            return true;
+        }
+
+        function updateMissionList() {
+            const container = document.getElementById('mission-list-container');
+            if (!container) return;
+            
+            container.innerHTML = '';
+            missions.forEach((mission, index) => {
+                const item = document.createElement('div');
+                item.className = `mission-item ${index === currentMissionIndex && gameActive ? 'active' : ''} ${mission.completed ? 'completed' : ''}`;
+                item.innerHTML = `
+                    <span>${mission.name}</span>
+                    <span class="status">${mission.completed ? '✓ ВЫПОЛНЕНО' : '○ НЕ ВЫПОЛНЕНО'}</span>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        // ========== ИНИЦИАЛИЗАЦИЯ ==========
+        window.onload = () => {
+            initScene();
+            initControls();
+            animate(0);
+            
+            // Загрузка данных пользователей
+            const savedUsers = localStorage.getItem('hl_users');
+            if (savedUsers) {
+                users = JSON.parse(savedUsers);
+            }
+            
+            // Обработчики меню
+            document.getElementById('go-to-login').onclick = () => showMenu('login-menu');
+            document.getElementById('go-to-register').onclick = () => showMenu('register-menu');
+            
+            document.getElementById('register-btn').onclick = () => {
+                const username = document.getElementById('reg-username').value.trim();
+                const password = document.getElementById('reg-password').value;
+                if (registerUser(username, password)) {
+                    alert('Регистрация успешна! Теперь войдите.');
+                    showMenu('login-menu');
+                }
+            };
+            
+            document.getElementById('login-btn').onclick = () => {
+                const username = document.getElementById('login-username').value.trim();
+                const password = document.getElementById('login-password').value;
+                if (loginUser(username, password)) {
+                    currentUser = username;
+                    document.getElementById('player-name-display').textContent = username;
+                    
+                    // Загружаем прогресс миссий пользователя
+                    if (users[username].missions) {
+                        users[username].missions.forEach((savedMission, idx) => {
+                            if (missions[idx]) {
+                                missions[idx].completed = savedMission.completed;
+                            }
+                        });
+                    }
+                    
+                    showMenu('main-menu');
+                }
+            };
+            
+            document.getElementById('start-game-btn').onclick = () => {
+                showMenu('mission-menu');
+                updateMissionList();
+            };
+            
+            document.getElementById('back-to-main-btn').onclick = () => {
+                showMenu('main-menu');
+            };
+            
+            document.getElementById('logout-btn').onclick = () => {
+                currentUser = null;
+                showMenu('register-menu');
+            };
+            
+            document.getElementById('resume-btn').onclick = () => {
+                togglePause();
+            };
+            
+            document.getElementById('exit-to-menu-btn').onclick = () => {
+                exitToMainMenu();
+            };
+            
+            // Дополнительно: кнопка начала миссии (выбираем первую невыполненную)
+            // Можно добавить кнопку "Начать" в списке миссий, но для простоты стартуем при клике на "НАЧАТЬ ИГРУ"
+            // и автоматически выбираем первую невыполненную миссию
+            
+            // Переопределим start-game-btn для начала игры с текущей миссией
+            const originalStartHandler = document.getElementById('start-game-btn').onclick;
+            document.getElementById('start-game-btn').onclick = () => {
+                // Находим первую невыполненную миссию
+                const firstIncomplete = missions.findIndex(m => !m.completed);
+                if (firstIncomplete !== -1) {
+                    currentMissionIndex = firstIncomplete;
+                } else {
+                    // Если все выполнены, начинаем с первой
+                    currentMissionIndex = 0;
+                    missions.forEach(m => m.completed = false);
+                }
+                updateHUD();
+                startGame();
+            };
+            
+            // Обработка закрытия окна
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+            
+            // Показываем меню регистрации при старте
+            showMenu('register-menu');
+        };
+    </script>
+</body>
+  </html>
